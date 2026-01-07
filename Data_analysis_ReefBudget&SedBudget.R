@@ -5,7 +5,7 @@
 ## habitats and a natural nutrient gradient
 ##
 ## Lange ID, Stuhr M, Perry CT, Gea Neuhaus A 
-## published in Royal Society Open Science (2026)
+## published in ... (2026)
 
 #
 # Author Ines Lange
@@ -2112,4 +2112,5 @@ FigS3_sed_comp <- plot_grid(p1_sed,p2_sed,p3_sed, ncol=2, labels = c("A", "B", "
 FigS3_sed_comp
 ggsave("figures/chagos_sediment_composition.jpg", width = 10, height = 10)
 ggsave("figures/chagos_sediment_composition.pdf", width = 10, height = 10)
+
 
