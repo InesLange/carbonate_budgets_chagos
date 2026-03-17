@@ -2,7 +2,8 @@ data analysis for:
 
 Carbonate framework and sediment production across island-fringing coral reef habitats and a natural nutrient gradient
 
-Lange ID, Stuhr M, Perry CT, Gea Neuhaus A 
+Lange ID, Stuhr M, Perry CT, Gea Neuhaus A
+
 published in Scientific Reports (2026)
 
 Author Ines Lange
