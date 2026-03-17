@@ -5,17 +5,18 @@
 ## habitats and a natural nutrient gradient
 ##
 ## Lange ID, Stuhr M, Perry CT, Gea Neuhaus A 
-## published in ... (2026)
+## published in Scientific Reports (2026)
 
 #
 # Author Ines Lange
 #
 # This code compares reef framework budgets and reef sediment budgets 
 # as well as benthic community composition and sediment composition for reefs 
-# around islands with high and low sebird densities in the Chagos Archipelago, BIOT.
+# around islands with high and low seabird densities in the Chagos Archipelago, BIOT.
 # Data were collected on lagoonal reefs (1-2m), shallow forereefs (2-3m) and deep forereefs (8-9m)   
 # in Apr/May 2021 (Sediment samples) and Oct/Nov 2023 (Sediment samples, ReefBudget surveys, SedBudget surveys) 
 # by Ines Lange and Marleen Stuhr 
+
 
 ## load packages
 
@@ -121,12 +122,12 @@ sedcomp$island <- factor(sedcomp$island,
 sedcomp$atoll <- factor(sedcomp$atoll, 
                         levels = c("Salomon", "Peros Banhos", "Great Chagos Bank"))
 sedcomp$habitat <- factor(sedcomp$habitat, 
-                          levels = c("beach", "water","lagoon", "shallow", "deep"))
+                          levels = c("beach", "lagoon", "shallow", "deep"))
 sedcomp$status <- factor(sedcomp$status, 
                          levels = c("low","high"))
 
-sedcomp_y <- subset(sedcomp, comparison == "y") # only sites comparable to transect locations 
-sedcomp_beach <- subset(sedcomp, habitat == "beach") # only sites at beach
+sedcomp_reef <- subset(sedcomp, habitat %in% c("lagoon","shallow","deep")) # only reef survey locations 
+sedcomp_beach <- subset(sedcomp, habitat  %in% "beach") # only sites at beach
 
 
 # benthic community composition
@@ -151,41 +152,41 @@ benthic$habitat <- factor(benthic$habitat,
 #carbonate budget
 avg_reefbud_island <- reefbudget %>%
   group_by(island, habitat, status) %>%
-  summarise_at(vars(5:19),list(mean=mean,sd=sd))
+  summarise_at(vars(5:26),list(mean=mean,sd=sd))
 (avg_reefbud_island <- as.data.frame(avg_reefbud_island))
-write.csv(avg_reefbud_island, "avg_reefbud_island.csv", row.names=F)
+write.csv(avg_reefbud_island, "output/tables/avg_reefbud_island.csv", row.names=F)
 
 avg_reefbud_status <- avg_reefbud_island %>%
   group_by(habitat,status) %>%
-  summarise_at(vars(2:16),list(mean=mean,sd=sd))
+  summarise_at(vars(2:23),list(mean=mean,sd=sd))
 (avg_reefbud_status <- as.data.frame(avg_reefbud_status))
 names(avg_reefbud_status) <- str_replace(
   names(avg_reefbud_status), "_mean_", "_") #remove middle mean from names
-write.csv(avg_reefbud_status, "avg_reefbud_status.csv", row.names=F)
+write.csv(avg_reefbud_status, "output/tables/avg_reefbud_status.csv", row.names=F)
 
 #sediment production
 avg_sedprod_island <- sedbudget %>%
   group_by(island,habitat,status) %>%
-  summarise_at(vars(5:13),list(mean=mean,sd=sd))
+  summarise_at(vars(5:13,28,29),list(mean=mean,sd=sd))
 (avg_sedprod_island <- as.data.frame(avg_sedprod_island))
-write.csv(avg_sedprod_island, "avg_sedprod_island.csv", row.names=F)
+write.csv(avg_sedprod_island, "output/tables/avg_sedprod_island.csv", row.names=F)
 
 avg_sedprod_status <- avg_sedprod_island %>%
   group_by(habitat,status) %>%
-  summarise_at(vars(2:10),list(mean=mean,sd=sd))
+  summarise_at(vars(2:12),list(mean=mean,sd=sd))
 (avg_sedprod_status <- as.data.frame(avg_sedprod_status))
 names(avg_sedprod_status) <- str_replace(
   names(avg_sedprod_status), "_mean_", "_") #remove middle mean from names
-write.csv(avg_sedprod_status, "avg_sedprod_status.csv", row.names=F)
+write.csv(avg_sedprod_status, "output/tables/avg_sedprod_status.csv", row.names=F)
 
 avg_sedprod_ratio_island <- avg_sedprod_island %>%
-  mutate(across(c(urchins_mean, parrotfish_mean, molluscs_mean, algae_mean, forams_mean, sponge_mean, coral_mean, cca_mean),
+  mutate(across(c(urchins_mean, parrotfish_mean, molluscs_mean, algae_mean, forams_mean, sponge_mean, coral_mean, cca_mean), 
                 ~ . / sediment_mean,
                 .names = "{.col}_ratio")) %>%
   select(habitat, island, ends_with("_ratio"))
 names(avg_sedprod_ratio_island) <- str_replace(
   names(avg_sedprod_ratio_island), "_mean_", "_") #remove middle mean from names
-write.csv(avg_sedprod_ratio_island, "avg_sedprod_ratio_island.csv", row.names=F)
+write.csv(avg_sedprod_ratio_island, "output/tables/avg_sedprod_ratio_island.csv", row.names=F)
 
 avg_sedprod_ratio_status <- avg_sedprod_status %>%
   mutate(across(c(urchins_mean, parrotfish_mean, molluscs_mean, algae_mean, forams_mean, sponge_mean,coral_mean, cca_mean),
@@ -194,7 +195,30 @@ avg_sedprod_ratio_status <- avg_sedprod_status %>%
   select(habitat, status, ends_with("_ratio"))
 names(avg_sedprod_ratio_status) <- str_replace(
   names(avg_sedprod_ratio_status), "_mean_", "_") #remove middle mean from names
-write.csv(avg_sedprod_ratio_status, "avg_sedprod_ratio_status.csv", row.names=F)
+write.csv(avg_sedprod_ratio_status, "output/tables/avg_sedprod_ratio_status.csv", row.names=F)
+
+
+### 
+### check difference in parrotfish/total sediment production with or without location(high vs low nutrient)-specific bpm
+
+# parrotfish sedimnet production
+avg_sedprod_island <- avg_sedprod_island %>%
+  mutate(diff_parrotfish = (parrotfish_samebpm_mean / parrotfish_mean) * 100) 
+avg_sedprod_island %>%
+  filter(status == "high", habitat == "lagoon") %>% # lagoon or shallow
+  summarise(mean_percent_ratio = mean(diff_parrotfish, na.rm = TRUE))
+# using location-specific bpm, parrotfish sediment production is on average 25% higher at both lagoon and shallow sites close to seabird islands
+# increase at high nutrient shallow lagoon sites by 0.44 and at shallow fore reef sites by 0.27 kg m-2 yr-1
+
+#total sediment production
+avg_sedprod_island <- avg_sedprod_island %>%
+  mutate(diff_sediment = (sediment_samebpm_mean / sediment_mean) * 100)
+avg_sedprod_island %>%
+  filter(status == "high", habitat == "shallow") %>% # lagoon or shallow
+  summarise(mean_percent_ratio = mean(diff_sediment, na.rm = TRUE))
+# using location-specific bpm, total sediment production is 24% higher at high nutrient lagoon sites and 18% higher production at high nutrient shallow sites
+# stick with location-specific bpm for more accurate and conservative results
+
 
 ## parrotfish biomass
 avg_parrot_biomass_island <- sedbudget %>%
@@ -231,28 +255,28 @@ avg_parrot_biomass_habitat
 
 
 #sediment composition
-write.csv(sedcomp_y, "avg_sedcomp_island.csv", row.names=F)
+write.csv(sedcomp_reef, "output/tables/avg_sedcomp_island.csv", row.names=F)
 
-avg_sedcomp_status <- sedcomp_y %>%
+avg_sedcomp_status <- sedcomp_reef %>%
   group_by(habitat,status) %>%
   summarise_at(vars(25:34),list(mean=mean,sd=sd))
 (avg_sedcomp_status <- as.data.frame(avg_sedcomp_status))
-write.csv(avg_sedcomp_status, "avg_sedcomp_status.csv", row.names=F)
+write.csv(avg_sedcomp_status, "output/tables/avg_sedcomp_status.csv", row.names=F)
 
-avg_sedcomp_habitat <- sedcomp_y %>%
+avg_sedcomp_habitat <- sedcomp_reef %>%
   group_by(status,habitat) %>%
   summarise_at(vars(25:34),list(mean=mean,sd=sd))
 (avg_sedcomp_habitat <- as.data.frame(avg_sedcomp_habitat))
-write.csv(avg_sedcomp_habitat, "avg_sedcomp_habitat.csv", row.names=F)
+write.csv(avg_sedcomp_habitat, "output/tables/avg_sedcomp_habitat.csv", row.names=F)
 
 #for beach samples
-write.csv(sedcomp_beach, "avg_sedcomp_beach_island.csv", row.names=F)
+write.csv(sedcomp_beach, "output/tables/avg_sedcomp_beach_island.csv", row.names=F)
 
 avg_sedcomp_beach_status <- sedcomp_beach %>%
   group_by(location,status) %>%
   summarise_at(vars(25:34),list(mean=mean,sd=sd))
 (avg_sedcomp_beach_status <- as.data.frame(avg_sedcomp_beach_status))
-write.csv(avg_sedcomp_beach_status, "avg_sedcomp_beach_status.csv", row.names=F)
+write.csv(avg_sedcomp_beach_status, "output/tables/avg_sedcomp_beach_status.csv", row.names=F)
 
 
 #######
@@ -263,33 +287,53 @@ write.csv(avg_sedcomp_beach_status, "avg_sedcomp_beach_status.csv", row.names=F)
 #### ReefBudget
 ###
 
-# includes increased coral calcification at birdy lagoon and shallow fore reef sites
+# old version: using average multiplier 2.0 to account for
+# increased coral calcification at birdy lagoon and shallow fore reef sites (coral_prod * 2.0)
 net_prod_2.0.plot <- ggplot(reefbudget, aes(x = habitat, y = net_prod_2.0, fill=status))
 (net_prod.plot <- net_prod_2.0.plot + geom_boxplot(show.legend=TRUE) + 
     labs(y=expression("Net carbonate budget (kg"~CaCO[3]~m^-2~yr^-1*")")) + xlab("Habitat") + theme_classic() +   scale_fill_manual(values = alpha(c("#BE0032","#0067A5"),0.7)) + 
     facet_wrap(~atoll)+
     theme(axis.text=element_text(size=12), axis.title=element_text(size=12), legend.text=element_text(size=12), strip.text = element_text(size = 12)))
-ggsave("figures/Fig_net_prod_2.0.jpg", width = 7, height = 4)
-ggsave("figures/Fig_net_prod_2.0.pdf", width = 7, height = 4)
 # Salomon > GCB, PB; lagoon > shallow, deep
 
 # wrap at site level
 RB_site.plot <- ggplot(reefbudget, aes(x = habitat, y = net_prod_2.0, fill=status))
 (RB_site.plot <- RB_site.plot + geom_boxplot(show.legend=TRUE) + 
     labs(y=expression("Net carbonate budget (kg"~CaCO[3]~m^-2~yr^-1*")")) + xlab("Island") + 
-    ylim(-2, 16) + # adjust axis to same as RB?
+    ylim(-2, 16) + # adjust axis to same as SB
     theme_classic() +   scale_fill_manual(values = alpha(c("#BE0032","#0067A5"),0.7)) + 
     facet_wrap(~island,nrow = 3, ncol = 2)+
     theme(axis.text=element_text(size=12), axis.title=element_text(size=12), 
           legend.text=element_text(size=12), strip.text = element_text(size = 12)))
-ggsave("figures/Fig_RB_site.jpg", width = 4, height = 7)
-ggsave("figures/Fig_RB_site.pdf", width = 4, height = 7)
+ggsave("figures/Fig1_RB_site.jpg", width = 4, height = 7)
+ggsave("figures/Fig1_RB_site.pdf", width = 4, height = 7)
+
+# new version: using taxa-specific multiplier (2.7 for competitive/weedy and 1.6 for generalist/stress-tolerant corals) to account for
+#  increased coral calcification at birdy lagoon and shallow fore reef sites (competitive_coral_prod*2.7, generalist_coral_prod*1.6)
+net_prod_taxa.plot <- ggplot(reefbudget, aes(x = habitat, y = net_prod_taxa, fill=status))
+(net_prod_taxa.plot <- net_prod_taxa.plot + geom_boxplot(show.legend=TRUE) + 
+    labs(y=expression("Net carbonate budget (kg"~CaCO[3]~m^-2~yr^-1*")")) + xlab("Habitat") + theme_classic() +   scale_fill_manual(values = alpha(c("#BE0032","#0067A5"),0.7)) + 
+    facet_wrap(~atoll)+
+    theme(axis.text=element_text(size=12), axis.title=element_text(size=12), legend.text=element_text(size=12), strip.text = element_text(size = 12)))
+# Salomon > GCB, PB; lagoon > shallow, deep
+
+# wrap at site level
+RB_site2.plot <- ggplot(reefbudget, aes(x = habitat, y = net_prod_taxa, fill=status))
+(RB_site2.plot <- RB_site2.plot + geom_boxplot(show.legend=TRUE) + 
+    labs(y=expression("Net carbonate budget (kg"~CaCO[3]~m^-2~yr^-1*")")) + xlab("Island") + 
+    ylim(-2, 22) + # adjust axis to fit higher values
+    theme_classic() +   scale_fill_manual(values = alpha(c("#BE0032","#0067A5"),0.7)) + 
+    facet_wrap(~island,nrow = 3, ncol = 2)+
+    theme(axis.text=element_text(size=12), axis.title=element_text(size=12), 
+          legend.text=element_text(size=12), strip.text = element_text(size = 12)))
+ggsave("output/figures/Fig1_RB_site2.jpg", width = 4, height = 7)
+ggsave("output/figures/Fig1_RB_site2.pdf", width = 4, height = 7)
 
 
 ##### SedBudget 
 ###
 
-sed_prod.plot <- ggplot(sedbudget, aes(x = habitat, y = sediment, fill=status))
+sed_prod.plot <- ggplot(sedbudget, aes(x = habitat, y = sediment_samebpm, fill=status)) #check difference between sediment and sediment_samebpm
 (sed_prod <- sed_prod.plot + geom_boxplot(show.legend=TRUE) + 
     labs(y=expression("Sediment production (kg CaC"*O[3]~m^-2~yr^-1*")"), x="Habitat") + theme_classic() +   scale_fill_manual(values = alpha(c("#BE0032","#0067A5"),0.7)) + 
     facet_wrap(~atoll)+
@@ -302,13 +346,13 @@ ggsave("figures/sedbudget_chagos_habitat_atoll.pdf", width = 7, height = 4)
 SB_site.plot <- ggplot(sedbudget, aes(x = habitat, y = sediment, fill=status))
 (SB_site.plot <- SB_site.plot + geom_boxplot(show.legend=TRUE) + 
     labs(y=expression("Sediment budget (kg"~CaCO[3]~m^-2~yr^-1*")")) + xlab("Island") + 
-    ylim(-2, 16) + # adjust axis to same as RB?
+    ylim(-2, 22) + # adjust axis to same as RB
     theme_classic() +   scale_fill_manual(values = alpha(c("#BE0032","#0067A5"),0.7)) + 
     facet_wrap(~island,nrow = 3, ncol = 2)+
     theme(axis.text=element_text(size=12), axis.title=element_text(size=12), 
           legend.text=element_text(size=12), strip.text = element_text(size = 12)))
-ggsave("figures/Fig_SB_site_axis.jpg", width = 4, height = 7)
-ggsave("figures/Fig_SB_site_axis.pdf", width = 4, height = 7)
+ggsave("output/figures/Fig1_SB_site_axis2.jpg", width = 4, height = 7)
+ggsave("output/figures/Fig1_SB_site_axis2.pdf", width = 4, height = 7)
 
 
 #########
@@ -324,7 +368,7 @@ ggsave("figures/Fig_SB_site_axis.pdf", width = 4, height = 7)
 pr_default_cauchy <- 
   set_prior("cauchy(0,2)", class = "sigma")
 
-# net carbonate budget
+# net carbonate budget using common calcification multiplier
 #model with interaction
 net_prod_2.0_mod <- brm(
   net_prod_2.0 ~ status * habitat + (1|atoll/island),
@@ -365,7 +409,21 @@ net_prod_loglink_mod <- brm(
   sample_prior = "yes",
   file = "output/brms/net_prod_2.0_mod")
 print(net_prod_loglink_mod)
-#doesn't really make a difference, keep using weakly informativ priors
+#doesn't really make a difference, keep using weakly informative priors
+
+###
+# net carbonate budget using taxa-specific calcification multipliers
+net_prod_taxa_mod <- brm(
+  net_prod_taxa ~ status * habitat + (1|atoll/island),
+  data = reefbudget, 
+  iter = 3000, warmup = 1000, chains = 4, cores = 4,
+  control = list(adapt_delta = 0.999, max_treedepth = 15), 
+  sample_prior="yes",
+  prior = pr_default_cauchy,
+  file = "output/brms/net_prod_taxa_mod_0")
+print(net_prod_taxa_mod) #0 divergent trans, 
+# interaction terms are not credibly different from zero, so there’s no strong evidence 
+# that the effect of status changes dramatically across habitats.
 
 # SedBudget
 sed_prod_mod<- brm(
@@ -377,14 +435,32 @@ sed_prod_mod<- brm(
   file = "output/brms/sed_prod_mod_0")
 print(sed_prod_mod) #1 divergent trans
 
+# if NOT using nutrient-specific bpm
+sed_prod_samebpm_mod<- brm(
+  sediment_samebpm~ status * habitat  + (1|atoll/island),
+  data = sedbudget, 
+  iter = 3000, warmup = 1000, chains = 4, cores = 4,
+  control = list(adapt_delta = 0.999, max_treedepth = 15), 
+  sample_prior="no",
+  file = "output/brms/sed_prod_samebpm_mod_0")
+print(sed_prod_mod) #1 divergent trans
+
 ##check plots----
 pp_check(net_prod_2.0_mod)
 plot(net_prod_2.0_mod, ask = FALSE)
 plot(conditional_effects(net_prod_2.0_mod))
 
+pp_check(net_prod_taxa_mod)
+plot(net_prod_taxa_mod, ask = FALSE)
+plot(conditional_effects(net_prod_taxa_mod))
+
 pp_check(sed_prod_mod)
 plot(sed_prod_mod, ask = FALSE)
 plot(conditional_effects(sed_prod_mod))
+
+pp_check(sed_prod_samebpm_mod)
+plot(sed_prod_samebpm_mod, ask = FALSE)
+plot(conditional_effects(sed_prod_samebpm_mod))
 
 # coral cover
 #model with interaction
@@ -414,11 +490,15 @@ print(parrotfish_mod) #0 divergent trans,
 net_prod_2.0_mod.rg <- update(ref_grid(net_prod_2.0_mod))
 net_prod_loglink_mod.rg <- update(ref_grid(net_prod_loglink_mod))
 net_prod_2.0_mod_add.rg <- update(ref_grid(net_prod_2.0_mod_add))
+net_prod_taxa_mod.rg <- update(ref_grid(net_prod_taxa_mod))
 sed_prod_mod.rg <- update(ref_grid(sed_prod_mod))
+sed_prod_samebpm_mod.rg <- update(ref_grid(sed_prod_samebpm_mod))
 coral_cover_mod.rg <- update(ref_grid(coral_cover_mod))
 parrotfish_mod.rg <- update(ref_grid(parrotfish_mod))
 
-#contrasts by habitat - difference between ratty and birdy
+## contrasts by habitat - difference between high nutrient and low nutrient sites
+
+# for reefbudget using common calcification multiplier (2.0)
 contrasts_by_habitat <- emmeans(net_prod_2.0_mod.rg, ~ status | habitat, type = "response", by = "habitat") %>%
   contrast("trt.vs.ctrl")
 print(contrasts_by_habitat)%>%
@@ -440,7 +520,6 @@ print(contrasts_by_habitat)%>%
 #HPD interval probability: 0.95 
 
 # for model with log response and prior 2
-#contrasts by habitat - difference between ratty and birdy
 contrasts_by_habitat_pr <- emmeans(net_prod_loglink_mod.rg, ~ status | habitat, type = "response", by = "habitat") %>%
   contrast("trt.vs.ctrl")
 print(contrasts_by_habitat_pr)%>%
@@ -461,7 +540,7 @@ print(contrasts_by_habitat_pr)%>%
 #Point estimate displayed: median 
 #HPD interval probability: 0.95 
 
-#very similar, not necessary to include prior
+####very similar, not necessary to include prior
 
 summary(net_prod_2.0_mod)
 
@@ -478,6 +557,41 @@ hypothesis(net_prod_2.0_mod, "statushigh + statushigh:habitatdeep > 0") #for dee
 #Hypothesis                   Estimate Est.Error CI.Lower CI.Upper Evid.Ratio Post.Prob Star
 #1 (statushigh+statu... > 0     0.53      1.64    -1.99     3.06       1.88      0.65     
 
+
+# for reefbudget using taxa-specific calcification multipliers
+contrasts_by_habitat_taxa <- emmeans(net_prod_taxa_mod.rg, ~ status | habitat, type = "response", by = "habitat") %>%
+  contrast("trt.vs.ctrl")
+print(contrasts_by_habitat_taxa)%>%
+  as.data.frame()
+
+#habitat = lagoon:
+#  contrast   estimate lower.HPD upper.HPD
+#high - low     3.74    -0.115      7.76
+
+#habitat = shallow:
+#  contrast   estimate lower.HPD upper.HPD
+#high - low     3.09    -0.606      7.26
+
+#habitat = deep:
+#  contrast   estimate lower.HPD upper.HPD
+#high - low     0.55    -3.050      4.85
+
+summary(net_prod_taxa_mod)
+
+# check probability that carbonate budgets are higher at sites with seabird nutrients, for each habitat
+hypothesis(net_prod_taxa_mod, "statushigh>0") # for lagoon, not specified in command as this is the reference level which is included in the intercept
+#Hypothesis           Estimate Est.Error CI.Lower CI.Upper Evid.Ratio Post.Prob Star
+#1 (statushigh) > 0      3.73      1.96     0.67     6.86      33.48      0.97    *
+
+hypothesis(net_prod_taxa_mod, "statushigh + statushigh:habitatshallow > 0") #for shallow
+#Hypothesis                   Estimate Est.Error CI.Lower CI.Upper Evid.Ratio Post.Prob Star
+#1 (statushigh+statu... > 0      3.11      1.92     0.12      6.2      20.86      0.95    *
+
+hypothesis(net_prod_taxa_mod, "statushigh + statushigh:habitatdeep > 0") #for deep
+#Hypothesis                   Estimate Est.Error CI.Lower CI.Upper Evid.Ratio Post.Prob Star
+#1 (statushigh+statu... > 0    0.55      1.94    -2.42     3.63       1.78      0.64     
+
+### use taxa-specific multipliers for results 
 
 # for sediment budgets
 contrasts_by_habitat_sed <- emmeans(sed_prod_mod.rg, ~ status | habitat, type = "response", by = "habitat") %>%
@@ -518,17 +632,45 @@ hypothesis(sed_prod_mod, "statushigh + statushigh:habitatdeep < 0") #for deep
 #Hypothesis                   Estimate Est.Error CI.Lower CI.Upper Evid.Ratio Post.Prob Star
 #1 (statushigh+statu... < 0    -0.87      0.94    -2.37     0.56       5.71      0.85  
 
-# check probability that sediment budgets are higher at sites with seabird nutrients, for each habitat
-hypothesis(sed_prod_mod, "statushigh>0") # for lagoon, not specified in command as this is the reference level which is included in the intercept
-
-hypothesis(sed_prod_mod, "statushigh + statushigh:habitatshallow > 0") #for shallow
-
-hypothesis(sed_prod_mod, "statushigh + statushigh:habitatdeep > 0") #for deep
-
 #check probability of negative effect for deep?
 hypothesis(sed_prod_mod, "statushigh + statushigh:habitatdeep < 0") #for deep
 #Hypothesis                   Estimate Est.Error CI.Lower CI.Upper Evid.Ratio Post.Prob Star
 #1 (statushigh+statu... < 0    -0.87      0.94    -2.37     0.56       5.71      0.85  
+
+
+# for sediment budgets NOT using nutrient specific bpm
+contrasts_by_habitat_sed_samebpm <- emmeans(sed_prod_samebpm_mod.rg, ~ status | habitat, type = "response", by = "habitat") %>%
+  contrast("trt.vs.ctrl")
+print(contrasts_by_habitat_sed_samebpm)%>%
+  as.data.frame()
+
+#habitat = lagoon:
+#  contrast   estimate lower.HPD upper.HPD
+#high - low    1.469     -0.36      3.39
+
+#habitat = shallow:
+#  contrast   estimate lower.HPD upper.HPD
+#high - low    0.430     -1.57      2.27
+
+#habitat = deep:
+#  contrast   estimate lower.HPD upper.HPD
+#high - low   -0.845     -2.76      0.95
+
+# check probability that sediment budgets are higher at sites with seabird nutrients, for each habitat
+hypothesis(sed_prod_samebpm_mod, "statushigh>0") # for lagoon, not specified in command as this is the reference level which is included in the intercept
+#  Hypothesis Estimate Est.Error CI.Lower CI.Upper Evid.Ratio Post.Prob Star
+#1 (statushigh) > 0     1.46      0.95    -0.09     2.96      16.28      0.94     
+
+hypothesis(sed_prod_samebpm_mod, "statushigh + statushigh:habitatshallow > 0") #for shallow
+#Hypothesis Estimate Est.Error CI.Lower CI.Upper Evid.Ratio Post.Prob Star
+#1 (statushigh+statu... > 0     0.43      0.98    -1.14     1.97       2.19      0.69
+
+#check probability of negative effect for deep?
+hypothesis(sed_prod_samebpm_mod, "statushigh + statushigh:habitatdeep < 0") #for deep
+#Hypothesis Estimate Est.Error CI.Lower CI.Upper Evid.Ratio Post.Prob Star
+#1 (statushigh+statu... < 0    -0.85      0.96    -2.34     0.63       4.84      0.83
+
+### not that different, nutrient effect at lagoon sites stronger, but keep using location-specific bpm for more accurate and conservative results
 
 # for coral cover
 contrasts_by_habitat_cover <- emmeans(coral_cover_mod.rg, ~ status | habitat, type = "response", by = "habitat") %>%
@@ -574,6 +716,8 @@ print(contrasts_by_habitat_parrotfish)%>%
 
 
 #to report median estimates for each habitat: 
+
+# ReefBudget using common multiplier
 net_prod_2.0_mod.rg %>% 
   emmeans(~ status|habitat,
           type = "response")%>%
@@ -664,6 +808,44 @@ net_prod_2.0_mod_add.rg %>%
 #Point estimate displayed: median 
 #HPD interval probability: 0.95 
 
+### ReefBudget using taxa-specific calcification multipliers
+net_prod_taxa_mod.rg %>% 
+  emmeans(~ status|habitat,
+          type = "response")%>%
+  as.data.frame()
+
+#habitat = lagoon:
+#  status   emmean lower.HPD upper.HPD
+#low    3.624783 -0.444841  7.588384
+#high   7.349311  3.299969 11.345058
+
+#habitat = shallow:
+#  status   emmean lower.HPD upper.HPD
+#low    1.597303 -2.498456  5.565890
+#high   4.687964  0.625846  8.731986
+
+#habitat = deep:
+#  status   emmean lower.HPD upper.HPD
+#low    3.181255 -0.692839  7.238112
+#high   3.765848 -0.461282  7.663416
+
+#Point estimate displayed: median 
+#HPD interval probability: 0.95 
+
+net_prod_taxa_mod.rg %>% 
+  emmeans(~ habitat,
+          type = "response")%>%
+  as.data.frame()
+
+#NOTE: Results may be misleading due to involvement in interactions
+#habitat   emmean  lower.HPD upper.HPD
+#lagoon  5.493251  1.8761752  8.920115
+#shallow 3.139194 -0.4584085  6.647443
+#deep    3.485437 -0.1001734  6.979546
+
+#Results are averaged over the levels of: status 
+#Point estimate displayed: median 
+#HPD interval probability: 0.95 
 
 ### SedBudget
 sed_prod_mod.rg %>% 
@@ -805,7 +987,7 @@ low_colors <- c(
 #### for framework production 
 
 # Step 1: Summarise per draw, status, and habitat
-pred_draws_framework <- net_prod_2.0_mod %>%
+pred_draws_framework <- net_prod_taxa_mod %>%
   add_epred_draws(
     newdata = reefbudget,
     re_formula = ~(1 | atoll)
@@ -916,19 +1098,19 @@ pred_habitat_sediment <- pred_habitat_sediment %>%
 
 # for framework budgets
 #get estimates and HPDs:
-net_prod_2.0_pred_7<-net_prod_2.0_mod.rg%>%
+net_prod_taxa_pred_7<-net_prod_taxa_mod.rg%>%
   emmeans(~ status|habitat,  
           type="response")%>%
   contrast("trt.vs.ctrl", level = .7)%>%
   as.data.frame()
 
-net_prod_2.0_pred_9<-net_prod_2.0_mod.rg%>%
+net_prod_taxa_pred_9<-net_prod_taxa_mod.rg%>%
   emmeans(~ status|habitat, 
           type="response")%>%
   contrast("trt.vs.ctrl", level = .9)%>%
   as.data.frame()
 
-net_prod_2.0_mod.rg %>% 
+net_prod_taxa_mod.rg %>% 
   emmeans(~ status|habitat,
           type = "response")%>%
   contrast("trt.vs.ctrl", level = .9)%>%
@@ -936,9 +1118,9 @@ net_prod_2.0_mod.rg %>%
 
 #combine estimates:
 net_prod_est<-data.frame(effect = c( 'lagoon', 'shallow', 'deep'),
-                         estimate = c(net_prod_2.0_pred_7$estimate,net_prod_2.0_pred_7$estimate), #effect size is the same regardless of interval, so can use either for these
-                         low = c (net_prod_2.0_pred$lower.HPD, net_prod_2.0_pred_7$lower.HPD),
-                         up = c( net_prod_2.0_pred_9$upper.HPD, net_prod_2.0_pred_7$upper.HPD),
+                         estimate = c(net_prod_taxa_pred_7$estimate,net_prod_taxa_pred_7$estimate), #effect size is the same regardless of interval, so can use either for these
+                         low = c (net_prod_taxa_pred_9$lower.HPD, net_prod_taxa_pred_7$lower.HPD),
+                         up = c( net_prod_taxa_pred_9$upper.HPD, net_prod_taxa_pred_7$upper.HPD),
                          level = c( .9, .9, .9, .7, .7, .7))
 net_prod_est
 
@@ -1031,8 +1213,8 @@ Fig2 <- plot_grid(
 )
 Fig2
 
-ggsave("figures/Fig2_carbonate_production.pdf", width = 10, height = 8)
-ggsave("figures/Fig2_carbonate_production.jpg", width = 10, height = 8)
+ggsave("output/figures/Fig2_carbonate_production.pdf", width = 10, height = 8)
+ggsave("output/figures/Fig2_carbonate_production.jpg", width = 10, height = 8)
 
 
 
@@ -1094,7 +1276,7 @@ prod_palette <- c(
 #####
 # Found in reef sediment
 #transform contributions to long format
-comp_y_long <- sedcomp_y[,c(2:8,27:35)] %>%
+comp_y_long <- sedcomp_reef[,c(2:8,27:35)] %>%
   pivot_longer(cols=c("Coral", "Halimeda", "Mollusc", "Foraminifera","Crustacea","Echinoderms", "Soft coral", "CCA", "Other"), 
                names_to="group", values_to="sed")
 
@@ -1246,7 +1428,7 @@ grain_avg$grainsize <- factor(grain_avg$grainsize, levels = (grainsize_order))
 ### for sediment composition reef
 
 #transform grain sizes to long format
-graincomp_long <- sedcomp_y[,c(2:9,11:20)] %>%
+graincomp_long <- sedcomp_reef[,c(2:9,11:20)] %>%
   pivot_longer(cols=c(">2000", "1000-2000", "500-1000", "250-500",
                       "125-250", "63-125", "31-63", "16-31", "8-16", "<8"), 
                names_to="grainsize", values_to="grain")
@@ -1333,7 +1515,7 @@ graincomp.beach_avg$grainsize <- factor(graincomp.beach_avg$grainsize, levels = 
                             legend.position = c(0.99, 0.99), legend.justification = c("right", "top")))
 
 ####################
-# Combine Figures
+# Combine panels
 
 # composition
 p11_clean <- p11 + theme(legend.position = c(0.99, 0.99), legend.justification = c("right", "top"))
@@ -2112,5 +2294,4 @@ FigS3_sed_comp <- plot_grid(p1_sed,p2_sed,p3_sed, ncol=2, labels = c("A", "B", "
 FigS3_sed_comp
 ggsave("figures/chagos_sediment_composition.jpg", width = 10, height = 10)
 ggsave("figures/chagos_sediment_composition.pdf", width = 10, height = 10)
-
 
